@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building Dynamic GraphQL Queries for Filter Preview from URL Search Parameters</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-main: #673ab7;
+            --primary-light-dark: #ded1f0;
+            --primary-light-main: #e2dee7;
+            --primary-pglink-light: #eeebf5;
+            --text-primary: rgba(0, 0, 0, 0.87);
+            --text-secondary: rgba(0, 0, 0, 0.6);
+            --grey-border: rgba(0, 0, 0, 0.1);
+            --bg-light: #faf8fd;
+            --bg-code: #f6f1fc;
+            --white: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-primary);
+            line-height: 1.75;
+            background-color: var(--bg-light);
+        }
+
+        .hero {
+            background: linear-gradient(135deg, var(--primary-main) 0%, #9c27b0 100%);
+            color: white;
+            padding: 80px 20px 60px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.4rem;
+            font-weight: 700;
+            max-width: 800px;
+            margin: 0 auto 16px;
+            line-height: 1.3;
+        }
+
+        .hero .subtitle {
+            font-size: 1.15rem;
+            color: rgba(255, 255, 255, 0.95);
+            max-width: 600px;
+            margin: 0 auto 24px;
+        }
+
+        .hero .meta {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .hero .tags {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .hero .tag {
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 0.82rem;
+        }
+
+        article {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 48px 24px 80px;
+        }
+
+        h2 {
+            font-size: 1.65rem;
+            font-weight: 700;
+            color: var(--primary-main);
+            margin: 48px 0 16px;
+            line-height: 1.35;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--primary-main);
+            margin: 36px 0 12px;
+        }
+
+        p {
+            margin-bottom: 18px;
+            color: var(--text-primary);
+        }
+
+        strong {
+            color: var(--primary-main);
+            font-weight: 600;
+        }
+
+        a {
+            color: var(--primary-main);
+            text-decoration: underline;
+            text-decoration-color: #c2b0e2;
+            text-underline-offset: 3px;
+        }
+
+        a:hover {
+            text-decoration-color: var(--primary-main);
+        }
+
+        .callout {
+            background: var(--primary-light-dark);
+            border-left: 4px solid var(--primary-main);
+            border-radius: 0 8px 8px 0;
+            padding: 20px 24px;
+            margin: 28px 0;
+            font-size: 1.05rem;
+        }
+
+        .callout p:last-child {
+            margin-bottom: 0;
+        }
+
+        .callout-idea {
+            background: linear-gradient(135deg, var(--primary-light-dark), var(--primary-pglink-light));
+            border-left-color: #9c27b0;
+        }
+
+        img {
+            width: 100%;
+            border-radius: 10px;
+            margin: 24px 0;
+            box-shadow: 0 4px 20px rgba(103, 58, 183, 0.12);
+        }
+
+        .img-caption {
+            text-align: center;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            margin-top: -16px;
+            margin-bottom: 28px;
+            font-style: italic;
+        }
+
+        pre {
+            background: #f0eaf5;
+            color: #2d2d2d;
+            border: 1px solid var(--primary-light-dark);
+            border-radius: 10px;
+            padding: 24px;
+            overflow-x: auto;
+            margin: 20px 0 28px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.88rem;
+            line-height: 1.65;
+            box-shadow: 0 2px 8px rgba(103, 58, 183, 0.08);
+        }
+
+        pre code {
+            font-family: inherit;
+            background: none;
+            padding: 0;
+        }
+
+        .code-label {
+            display: inline-block;
+            background: var(--primary-main);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 3px 12px;
+            border-radius: 6px 6px 0 0;
+            margin-bottom: -4px;
+            font-family: 'Fira Code', monospace;
+        }
+
+        code {
+            font-family: 'Fira Code', monospace;
+            background: var(--bg-code);
+            color: var(--primary-main);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.88em;
+        }
+
+        ul, ol {
+            margin: 12px 0 20px 24px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .principle-list {
+            list-style: none;
+            margin-left: 0;
+            padding: 0;
+        }
+
+        .principle-list li {
+            background: var(--white);
+            border: 1px solid var(--primary-light-dark);
+            border-radius: 8px;
+            padding: 14px 20px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .principle-list .num {
+            background: var(--primary-main);
+            color: white;
+            font-weight: 700;
+            font-size: 0.85rem;
+            min-width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .architecture-box {
+            background: var(--white);
+            border: 2px solid var(--primary-light-dark);
+            border-radius: 12px;
+            padding: 32px;
+            margin: 28px 0;
+            text-align: center;
+        }
+
+        .architecture-box .flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+        }
+
+        .architecture-box .flow .step {
+            background: var(--primary-pglink-light);
+            border: 1px solid var(--primary-light-dark);
+            padding: 10px 16px;
+            border-radius: 8px;
+            color: var(--primary-main);
+            font-weight: 500;
+        }
+
+        .architecture-box .flow .arrow {
+            color: var(--primary-main);
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .section-divider {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary-light-dark), transparent);
+            margin: 48px 0;
+        }
+
+        .highlight {
+            background: linear-gradient(180deg, transparent 60%, var(--primary-light-dark) 60%);
+        }
+
+        .token-keyword { color: #7b1fa2; }
+        .token-string { color: #2e7d32; }
+        .token-comment { color: #8e8e8e; font-style: italic; }
+        .token-function { color: #1565c0; }
+        .token-type { color: #b45309; }
+        .token-property { color: #0277bd; }
+        .token-punctuation { color: #444; }
+        .token-operator { color: #0277bd; }
+        .token-tag { color: #c62828; }
+        .token-variable { color: #d84315; }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            background: var(--primary-pglink-light);
+            border-top: 1px solid var(--primary-light-dark);
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--primary-main);
+        }
+
+        @media (max-width: 600px) {
+            .hero h1 { font-size: 1.7rem; }
+            .hero { padding: 48px 16px 40px; }
+            article { padding: 32px 16px 60px; }
+            pre { padding: 16px; font-size: 0.8rem; }
+            .architecture-box .flow { flex-direction: column; }
+            .architecture-box .flow .arrow { transform: rotate(90deg); }
+        }
+    </style>
+</head>
+<body>
+
+<header class="hero">
+    <h1>Building Dynamic GraphQL Queries for Filter Preview from URL Search Parameters</h1>
+    <p class="subtitle">How we keep URLs short, backend queries optimal, and the UI rich &mdash; all at the same time.</p>
+    <p class="meta">ProGrocery Engineering &middot; Feb 2026 &middot; 10 min read</p>
+    <div class="tags">
+        <span class="tag">React</span>
+        <span class="tag">GraphQL</span>
+        <span class="tag">TypeScript</span>
+        <span class="tag">URL State</span>
+        <span class="tag">UX</span>
+    </div>
+</header>
+
+<article>
+
+    <h2>Introduction</h2>
+
+    <p>
+        Hi there! Today we'll look into advanced backend search in our app
+        <a href="https://www.freevision.co/case-studies/application-for-progrocery" target="_blank">ProGrocery</a>
+        and elaborate on an idea that might help you too: <strong>storing search parameters in the URL</strong> and, more importantly, <strong>dynamically building GraphQL queries</strong> to power the filter preview UI.
+    </p>
+
+    <p>
+        As our app grew and our client demanded superior features &mdash; more and more complex ways to filter and search various data lists &mdash; we needed to implement an advanced backend search with many attributes to choose from.
+    </p>
+
+    <img src="images/search_filter-attributes.png" alt="Available search filter attributes in ProGrocery">
+    <p class="img-caption">Users can pick from a wide range of filter attributes &mdash; brands, products, statuses, vendors, and more.</p>
+
+    <p>
+        Each search attribute has its own set of options. When needed, these are <strong>lazy-loaded from the backend</strong> and debounced as the user types into the search input, keeping the autocomplete experience snappy without hammering the server.
+    </p>
+
+    <img src="images/search_filter-attribute-options.png" alt="Lazy-loaded autocomplete options">
+    <p class="img-caption">Options are fetched on demand as users type, with debounced queries to keep things performant.</p>
+
+    <p>
+        Of course, we shipped it with a polished UI. So far nothing groundbreaking here &mdash; every decent app has search filters.
+    </p>
+
+    <img src="images/search_filters-applied.png" alt="Applied search filters shown as chips">
+    <p class="img-caption">Applied filters render as removable chips, showing human-readable labels rather than raw IDs.</p>
+
+    <h2>The Challenge: Shareable URLs</h2>
+
+    <p>
+        Our app is used daily by people of varying computer literacy. We always strive to make the UI as enjoyable as possible for all of them. One recurring request was the ability to <strong>share a filtered view via a link</strong> &mdash; whether it's a colleague sharing a pre-filtered list, or a newsletter linking to a specific set of offers.
+    </p>
+
+    <p>
+        And this is the point where it starts to get interesting, because there are some good practices worth discussing if you're implementing a similar feature.
+    </p>
+
+    <h3>Principles for Search Parameters in URLs</h3>
+
+    <ul class="principle-list">
+        <li>
+            <span class="num">1</span>
+            <span><strong>URLs should be "pretty."</strong> When users copy and share links, or simply glance at the address bar, the URL shouldn't scare them. It should make semantic sense so users know where they are in the app's hierarchy. Storing search parameters after the <code>?</code> is the industry standard.</span>
+        </li>
+        <li>
+            <span class="num">2</span>
+            <span><strong>URLs have finite length.</strong> Although modern browsers can handle around 100k characters in a URL (this varies), it's still a finite resource. Store as little information as possible.</span>
+        </li>
+        <li>
+            <span class="num">3</span>
+            <span><strong>The UI needs more data than the URL holds.</strong> To filter products on the backend you only need their IDs, but in the UI you want to display their names, UPC codes, or other human-readable labels.</span>
+        </li>
+    </ul>
+
+    <p>
+        So the approach is clear: <strong>store only the essential IDs in the URL</strong> to keep it short and tidy, and then somehow retrieve additional data to show a rich UI.
+    </p>
+
+    <div class="callout callout-idea">
+        <p>
+            <strong>The key idea:</strong> You can't predict which combination of filters a user will set. If you hardcode a single "preview" query, it will either fetch too little data (and your UI breaks) or too much (wasting bandwidth and server resources on models you don't need for that particular search). The solution? <span class="highlight"><strong>Build the filter preview query dynamically</strong></span> based on what's actually in the URL.
+        </p>
+    </div>
+
+    <hr class="section-divider">
+
+    <h2>Architecture Overview</h2>
+
+    <p>Let's walk through the entire data flow before diving into code.</p>
+
+    <div class="architecture-box">
+        <div class="flow">
+            <div class="step">URL params</div>
+            <span class="arrow">&rarr;</span>
+            <div class="step">Parse &amp; deserialize</div>
+            <span class="arrow">&rarr;</span>
+            <div class="step">Build dynamic query</div>
+            <span class="arrow">&rarr;</span>
+            <div class="step">Single GraphQL request</div>
+            <span class="arrow">&rarr;</span>
+            <div class="step">Rich UI chips</div>
+        </div>
+    </div>
+
+    <p>
+        The filter state is serialized as JSON and stored under a single <code>search</code> query parameter. When the page loads, we deserialize it, figure out <em>which</em> filter keys are active, and compose a GraphQL query containing <em>only</em> the sub-queries needed for those keys. The result populates the preview chips you see in the screenshots above.
+    </p>
+
+    <p>We use this pattern across <strong>four different search screens</strong> in ProGrocery &mdash; Offer Review, All Offers, Surveys, and Stores &mdash; each with its own set of filter attributes but sharing the same reusable <code>FilterInput</code> component and dynamic query strategy.</p>
+
+    <hr class="section-divider">
+
+    <h2>Step 1: Serializing Filter State into the URL</h2>
+
+    <p>
+        The first building block is a simple custom hook that reads and writes the filter state to the URL. Here's the essence of <code>useUrlParams</code>:
+    </p>
+
+    <span class="code-label">useUrlParams.ts</span>
+    <pre><code><span class="token-keyword">const</span> <span class="token-function">useUrlParams</span> = () => {
+    <span class="token-keyword">const</span> history = <span class="token-function">useHistory</span>();
+    <span class="token-keyword">const</span> location = <span class="token-function">useLocation</span>();
+    <span class="token-keyword">const</span> urlParams = <span class="token-keyword">new</span> <span class="token-type">URLSearchParams</span>(location.search);
+
+    <span class="token-keyword">const</span> <span class="token-function">updateUrlParams</span> = (key: <span class="token-type">string</span>, value: <span class="token-type">any</span>) => {
+        <span class="token-keyword">if</span> (!value || keys(value).length === <span class="token-variable">0</span>) {
+            urlParams.<span class="token-function">delete</span>(key);
+        } <span class="token-keyword">else</span> {
+            <span class="token-keyword">const</span> serializedValue = <span class="token-type">JSON</span>.<span class="token-function">stringify</span>(value);
+            urlParams.<span class="token-function">set</span>(key, serializedValue);
+        }
+
+        history.<span class="token-function">replace</span>(
+            <span class="token-string">`${location.pathname}?${urlParams.toString()}`</span>,
+            location.state
+        );
+    };
+
+    <span class="token-keyword">return</span> updateUrlParams;
+};</code></pre>
+
+    <p>
+        Notice we use <code>history.replace</code> rather than <code>history.push</code>. This prevents every filter change from creating a new browser history entry &mdash; users can still hit Back to leave the page without having to undo every individual filter tweak.
+    </p>
+
+    <p>
+        The resulting URL looks something like:
+    </p>
+
+    <pre><code>/review/offers?search=<span class="token-string">{"brand_slug":["acme"],"status":["PENDING"]}</span></code></pre>
+
+    <p>
+        Clean, readable, and most importantly &mdash; <strong>only IDs and minimal values</strong>. No display names, no extra metadata clogging up the URL.
+    </p>
+
+    <h3>Reading It Back</h3>
+
+    <p>On the other end, <code>useSearchFilterValue</code> parses the URL on page load:</p>
+
+    <span class="code-label">useSearchFilterValue.ts</span>
+    <pre><code><span class="token-keyword">const</span> <span class="token-function">useSearchFilterValue</span> = () => {
+    <span class="token-keyword">const</span> urlParams = <span class="token-keyword">new</span> <span class="token-type">URLSearchParams</span>(location.search);
+    <span class="token-keyword">const</span> serializedFilterValue = urlParams.<span class="token-function">get</span>(<span class="token-string">'search'</span>);
+
+    <span class="token-keyword">const</span> value = <span class="token-function">useMemo</span>(() => {
+        <span class="token-keyword">if</span> (!serializedFilterValue) <span class="token-keyword">return</span> <span class="token-variable">undefined</span>;
+
+        <span class="token-keyword">try</span> {
+            <span class="token-keyword">return</span> <span class="token-type">JSON</span>.<span class="token-function">parse</span>(serializedFilterValue);
+        } <span class="token-keyword">catch</span> (error) {
+            console.<span class="token-function">error</span>(<span class="token-string">'Failed to parse URL search params'</span>);
+            <span class="token-keyword">return</span> <span class="token-variable">null</span>;
+        }
+    }, [serializedFilterValue]);
+
+    <span class="token-keyword">return</span> value;
+};</code></pre>
+
+    <p>
+        Simple <code>JSON.parse</code> with error handling. If the URL is tampered with or corrupted, we degrade gracefully instead of crashing.
+    </p>
+
+    <hr class="section-divider">
+
+    <h2>Step 2: The Reusable FilterInput Component</h2>
+
+    <p>
+        At the heart of the system is a generic, reusable <code>FilterInput</code> component that powers all four search screens. It accepts two critical callback props:
+    </p>
+
+    <span class="code-label">FilterInput — key props</span>
+    <pre><code><span class="token-keyword">interface</span> <span class="token-type">IProps</span>&lt;TFilterQueryVariables, T&gt; {
+    hints: <span class="token-type">T</span>;                    <span class="token-comment">// available filter attributes</span>
+    filter: <span class="token-type">TFilterQueryVariables</span>; <span class="token-comment">// current filter state</span>
+    onFilterChange?: (filter: <span class="token-type">TFilterQueryVariables</span>) => <span class="token-type">void</span>;
+
+    <span class="token-comment">// Converts UI suggestion objects → minimal filter values (IDs)</span>
+    buildOutFilter: (filter: <span class="token-type">TFilter</span>) => <span class="token-type">TFilterQueryVariables</span>;
+
+    <span class="token-comment">// Converts minimal filter values → human-readable labels</span>
+    buildOutFilterPreview: (filter: <span class="token-type">TFilterQueryVariables</span>)
+        => <span class="token-type">Promise</span>&lt;{ data: <span class="token-type">TFilterPreview</span>; error: <span class="token-type">any</span> }&gt;;
+}</code></pre>
+
+    <p>
+        The <code>buildOutFilter</code> function transforms rich suggestion objects (with labels, renderers, etc.) into the minimal ID-based values that get stored in the URL. The <code>buildOutFilterPreview</code> function does the reverse &mdash; it takes those minimal values and fetches human-readable display data. <strong>This is where the dynamic query magic happens.</strong>
+    </p>
+
+    <p>
+        Here's how FilterInput wires up the preview:
+    </p>
+
+    <span class="code-label">FilterInput — triggering the preview build</span>
+    <pre><code><span class="token-comment">// Whenever the filter changes, rebuild the preview</span>
+<span class="token-function">React.useEffect</span>(() => {
+    <span class="token-function">setFilterPreviewLoading</span>(<span class="token-variable">true</span>);
+    <span class="token-function">buildOutFilterPreview</span>(filter)
+        .<span class="token-function">then</span>(res => {
+            <span class="token-function">setFilterPreviewData</span>(res.data);
+            <span class="token-function">setFilterPreviewError</span>(res.error);
+        })
+        .<span class="token-function">finally</span>(() => <span class="token-function">setFilterPreviewLoading</span>(<span class="token-variable">false</span>));
+}, [filter]);</code></pre>
+
+    <hr class="section-divider">
+
+    <h2>Step 3: The Star of the Show &mdash; Dynamic Query Building</h2>
+
+    <p>
+        This is where it all comes together. Let's look at the <code>useFilterPreviewFromUrlParams</code> hook from our Offer Review screen. This is the most feature-rich filter in our app with <strong>11 different filter attributes</strong> including brands, products, vendors, account managers, statuses, delivery types, and more.
+    </p>
+
+    <h3>The Idea</h3>
+
+    <p>
+        Instead of writing a single monolithic GraphQL query that fetches preview data for <em>all possible</em> filter attributes, we build the query string at runtime from three arrays:
+    </p>
+
+    <span class="code-label">Core data structures</span>
+    <pre><code><span class="token-keyword">const</span> params: <span class="token-type">TParams</span> = [];    <span class="token-comment">// GraphQL variable declarations</span>
+<span class="token-keyword">const</span> queries: <span class="token-type">TQueries</span> = [];  <span class="token-comment">// GraphQL query fields</span>
+<span class="token-keyword">const</span> variables: <span class="token-type">TVariables</span> = {}; <span class="token-comment">// Actual variable values</span></code></pre>
+
+    <p>
+        We iterate over the active filter keys and <strong>only push query fragments for keys that are actually present in the URL</strong>:
+    </p>
+
+    <span class="code-label">useFilterPreviewFromUrlParams.ts — building the query</span>
+    <pre><code><span class="token-keyword">const</span> <span class="token-function">buildOutFilterPreview</span> = <span class="token-keyword">async</span> (filter: <span class="token-type">TFilter</span>) => {
+    <span class="token-keyword">const</span> data: <span class="token-type">TFilterPreview</span> = {};
+    <span class="token-keyword">const</span> params: <span class="token-type">string</span>[] = [];
+    <span class="token-keyword">const</span> queries: <span class="token-type">string</span>[] = [];
+    <span class="token-keyword">const</span> variables: <span class="token-type">TVariables</span> = {};
+
+    <span class="token-keyword">const</span> filterKeys = <span class="token-function">keys</span>(filter);
+
+    filterKeys.<span class="token-function">forEach</span>(key => {
+        <span class="token-keyword">const</span> values = filter[key];
+        <span class="token-keyword">if</span> (!values) <span class="token-keyword">return</span>;
+
+        <span class="token-keyword">switch</span> (key) {
+            <span class="token-keyword">case</span> <span class="token-string">'brand_slug'</span>:
+                params.<span class="token-function">push</span>(<span class="token-string">'$brandsFilters: BrandsFilterInput'</span>);
+                queries.<span class="token-function">push</span>(<span class="token-string">`
+                    brands(filters: $brandsFilters) {
+                        id
+                        name
+                    }
+                `</span>);
+                variables[<span class="token-string">'brandsFilters'</span>] = { slug: values };
+                <span class="token-keyword">break</span>;
+
+            <span class="token-keyword">case</span> <span class="token-string">'product_id'</span>:
+                params.<span class="token-function">push</span>(<span class="token-string">'$productsFilters: [ProductsFilterInput!]'</span>);
+                queries.<span class="token-function">push</span>(<span class="token-string">`
+                    products(filters: $productsFilters) {
+                        id
+                        upc12
+                        title
+                    }
+                `</span>);
+                variables[<span class="token-string">'productsFilters'</span>] = values.<span class="token-function">map</span>(id => ({
+                    key: <span class="token-type">ProductsFilterEnum</span>.Id,
+                    value: id,
+                }));
+                <span class="token-keyword">break</span>;
+
+            <span class="token-keyword">case</span> <span class="token-string">'vendor_company_id'</span>:
+                params.<span class="token-function">push</span>(<span class="token-string">'$companyIds: [ID!]!'</span>);
+                queries.<span class="token-function">push</span>(<span class="token-string">`
+                    company(id: $companyIds) {
+                        id
+                        name
+                    }
+                `</span>);
+                variables[<span class="token-string">'companyIds'</span>] = values;
+                <span class="token-keyword">break</span>;
+
+            <span class="token-comment">// Some keys don't need a query at all!</span>
+            <span class="token-keyword">case</span> <span class="token-string">'status'</span>:
+                data[key] = values.<span class="token-function">map</span>(s =>
+                    <span class="token-function">t</span>(<span class="token-string">`offer-status.pretty.${s.toLowerCase()}`</span>)
+                );
+                <span class="token-keyword">break</span>;
+
+            <span class="token-keyword">case</span> <span class="token-string">'related_offer_slug'</span>:
+            <span class="token-keyword">case</span> <span class="token-string">'user_email'</span>:
+                data[key] = values; <span class="token-comment">// already human-readable</span>
+                <span class="token-keyword">break</span>;
+        }
+    });
+
+    <span class="token-comment">// ...</span>
+};</code></pre>
+
+    <p>
+        Notice the elegant split: <strong>some filter keys need a backend query</strong> (brands, products, vendors, users) while others are <strong>resolved entirely on the client</strong> (statuses use i18n translation, emails and slugs are already human-readable). We only hit the server when we actually need to.
+    </p>
+
+    <h3>Composing the Query at Runtime</h3>
+
+    <p>Here's the function that takes our arrays and produces a valid GraphQL document:</p>
+
+    <span class="code-label">Dynamic GraphQL document construction</span>
+    <pre><code><span class="token-keyword">const</span> <span class="token-function">getCombinedQueryDocument</span> = (params, queries) => <span class="token-function">gql</span><span class="token-string">`
+    query FilterPreviewFromUrlParams${
+        params.length > 0 ? '(' + params.join(', ') + ')' : ''
+    } {
+        ${queries.join('\n')}
+    }
+`</span>;</code></pre>
+
+    <p>
+        If a user filters by <strong>brand</strong> and <strong>product</strong>, the generated query looks like:
+    </p>
+
+    <span class="code-label">Generated GraphQL query — brand + product</span>
+    <pre><code><span class="token-keyword">query</span> <span class="token-function">FilterPreviewFromUrlParams</span>(
+    <span class="token-variable">$brandsFilters</span>: <span class="token-type">BrandsFilterInput</span>,
+    <span class="token-variable">$productsFilters</span>: [<span class="token-type">ProductsFilterInput!</span>]
+) {
+    <span class="token-function">brands</span>(filters: <span class="token-variable">$brandsFilters</span>) {
+        id
+        name
+    }
+    <span class="token-function">products</span>(filters: <span class="token-variable">$productsFilters</span>) {
+        id
+        upc12
+        title
+    }
+}</code></pre>
+
+    <p>
+        But if they only filter by <strong>status</strong> and <strong>email</strong>? <strong>No GraphQL query is sent at all</strong> &mdash; both are resolved client-side. Zero network overhead.
+    </p>
+
+    <div class="callout">
+        <p>
+            <strong>Why this matters:</strong> In our Review screen alone, there are 11 possible filter attributes. A static query covering all of them would fetch brands, products, companies, and two separate user lists &mdash; all joined in a single request &mdash; even if the user only filtered by status. The dynamic approach means the query is always <strong>as small as it can be</strong>.
+        </p>
+    </div>
+
+    <h3>Mapping Results Back</h3>
+
+    <p>After the combined query returns, we map the response data back to the correct filter keys:</p>
+
+    <span class="code-label">Mapping query results to filter preview labels</span>
+    <pre><code><span class="token-keyword">if</span> (queries.length > <span class="token-variable">0</span>) {
+    <span class="token-keyword">const</span> res = <span class="token-keyword">await</span> <span class="token-function">getCombinedQuery</span>(params, queries, variables);
+
+    <span class="token-function">keys</span>(variables).<span class="token-function">forEach</span>(queriedVar => {
+        <span class="token-keyword">switch</span> (queriedVar) {
+            <span class="token-keyword">case</span> <span class="token-string">'brandsFilters'</span>:
+                data[<span class="token-string">'brand_slug'</span>] = res.data.brands
+                    .<span class="token-function">map</span>(b => b.name);
+                <span class="token-keyword">break</span>;
+
+            <span class="token-keyword">case</span> <span class="token-string">'productsFilters'</span>:
+                data[<span class="token-string">'product_id'</span>] = res.data.products
+                    .<span class="token-function">map</span>(p => <span class="token-string">`${p.upc12} - ${p.title}`</span>);
+                <span class="token-keyword">break</span>;
+
+            <span class="token-keyword">case</span> <span class="token-string">'companyIds'</span>:
+                data[<span class="token-string">'vendor_company_id'</span>] = res.data.company
+                    .<span class="token-function">map</span>(c => c.name);
+                <span class="token-keyword">break</span>;
+
+            <span class="token-keyword">case</span> <span class="token-string">'keheamUsersFilters'</span>:
+                data[<span class="token-string">'keheam_user_id'</span>] = res.data.keheam_users
+                    .<span class="token-function">map</span>(u => <span class="token-function">fullNameOrEmail</span>(u));
+                <span class="token-keyword">break</span>;
+        }
+    });
+}</code></pre>
+
+    <p>
+        The <code>data</code> object now contains human-readable labels for every active filter &mdash; and it gets passed down to the <code>FilterPreview</code> component that renders the chips.
+    </p>
+
+    <hr class="section-divider">
+
+    <h2>Step 4: Rendering the Filter Preview</h2>
+
+    <p>
+        The <code>FilterPreview</code> component iterates over the active filters and renders a chip for each value, pairing the raw filter value with its human-readable preview label:
+    </p>
+
+    <span class="code-label">FilterPreview.tsx</span>
+    <pre><code><span class="token-keyword">const</span> <span class="token-function">FilterPreview</span> = ({ filter, hints, filterPreview, loading }) => {
+    <span class="token-keyword">const</span> allFilters = [];
+    <span class="token-keyword">const</span> allFiltersPreview = [];
+
+    <span class="token-function">keys</span>(filter).<span class="token-function">forEach</span>(hintKey => {
+        <span class="token-keyword">const</span> values = filter[hintKey];
+        <span class="token-keyword">const</span> valuesPreview = filterPreview[hintKey];
+
+        <span class="token-keyword">if</span> (<span class="token-function">isArray</span>(values)) {
+            values.<span class="token-function">forEach</span>(value =>
+                allFilters.<span class="token-function">push</span>({ value, hintKey, hint: hints[hintKey] })
+            );
+        }
+        <span class="token-comment">// ... same for preview values</span>
+    });
+
+    <span class="token-keyword">return</span> (
+        &lt;<span class="token-tag">Box</span>&gt;
+            {loading &amp;&amp; &lt;<span class="token-tag">LoadingIndicator</span> overlay /&gt;}
+            {allFilters.<span class="token-function">map</span>((item, i) =&gt; (
+                &lt;<span class="token-tag">FilterInputChip</span>
+                    label={item.hint.label}
+                    title={allFiltersPreview[i]?.value}
+                    onRemove={() =&gt; <span class="token-function">handleDelete</span>(item)}
+                /&gt;
+            ))}
+        &lt;/<span class="token-tag">Box</span>&gt;
+    );
+};</code></pre>
+
+    <p>
+        Each chip shows the <strong>attribute label</strong> (e.g., "Brand:") alongside the <strong>preview value</strong> (e.g., "Acme Foods") &mdash; even though only the slug <code>"acme"</code> lives in the URL. The loading overlay ensures users see a smooth transition while the preview query is in flight.
+    </p>
+
+    <hr class="section-divider">
+
+    <h2>Step 5: Debounced Lazy-Loaded Suggestions</h2>
+
+    <p>
+        The filter input also needs to populate the autocomplete dropdown. Each filter attribute defines its own <code>suggestionsQuery</code> &mdash; a function that fetches options from the backend. Here's how the Review screen defines its hints:
+    </p>
+
+    <span class="code-label">useInputHints.ts — defining filter attributes</span>
+    <pre><code><span class="token-keyword">const</span> hints = <span class="token-function">useMemo</span>(() => ({
+    brand_slug: {
+        label: <span class="token-function">t</span>(<span class="token-string">'brand_slug.label'</span>),
+        description: <span class="token-function">t</span>(<span class="token-string">'brand_slug.description'</span>),
+        suggestionsQuery: <span class="token-function">buildBrandQuery</span>(client),
+        debounce: <span class="token-variable">500</span>,
+    },
+    product_id: {
+        label: <span class="token-function">t</span>(<span class="token-string">'product_id.label'</span>),
+        description: <span class="token-function">t</span>(<span class="token-string">'product_id.description'</span>),
+        suggestionsQuery: <span class="token-function">buildProductQuery</span>(client),
+        debounce: <span class="token-variable">500</span>,
+    },
+    vendor_company_id: {
+        label: <span class="token-function">t</span>(<span class="token-string">'vendor_company_id.label'</span>),
+        description: <span class="token-function">t</span>(<span class="token-string">'vendor_company_id.description'</span>),
+        suggestionsQuery: <span class="token-function">buildCompanyQuery</span>(client),
+        debounce: <span class="token-variable">500</span>,
+    },
+    status: {
+        label: <span class="token-function">t</span>(<span class="token-string">'status.label'</span>),
+        description: <span class="token-function">t</span>(<span class="token-string">'status.description'</span>),
+        suggestionsQuery: <span class="token-function">buildStatusQuery</span>(tt),
+        <span class="token-comment">// no debounce — local enum, instant</span>
+    },
+    <span class="token-comment">// ... 7 more attributes</span>
+}), [client, tt, rcSlug, periodIds, dcName]);</code></pre>
+
+    <p>
+        Notice how each hint declaratively configures its own debounce timing. Backend-fetched suggestions like brands and products use a 500ms debounce, while local enums like statuses and product types resolve instantly with no debounce.
+    </p>
+
+    <p>
+        The <code>FilterInput</code> component then uses a debounced callback to fetch suggestions only when the user pauses typing:
+    </p>
+
+    <span class="code-label">Debounced suggestion fetching</span>
+    <pre><code><span class="token-keyword">const</span> debouncedFetchSuggestions = <span class="token-function">React.useCallback</span>(
+    <span class="token-function">debounce</span>(fetchSuggestions, selectedHint?.debounce || <span class="token-variable">0</span>),
+    [selectedHint]
+);
+
+<span class="token-keyword">const</span> <span class="token-function">handleChange</span> = (value: <span class="token-type">string</span>) => {
+    <span class="token-function">setValue</span>(value);
+    <span class="token-keyword">if</span> (selectedHint) {
+        <span class="token-function">debouncedFetchSuggestions</span>(
+            selectedHint, value, setSuggestionsLoading, setSuggestions
+        );
+    }
+};</code></pre>
+
+    <hr class="section-divider">
+
+    <h2>Step 6: From Suggestion to URL (buildOutFilter)</h2>
+
+    <p>
+        When a user picks a suggestion from the dropdown, we need to convert the rich suggestion object into the minimal value that goes into the URL. This is the <code>buildOutFilter</code> callback, and each search screen implements its own version:
+    </p>
+
+    <span class="code-label">ReviewFilter — buildOutFilter</span>
+    <pre><code><span class="token-keyword">const</span> <span class="token-function">buildOutFilter</span> = (filter) => {
+    <span class="token-keyword">const</span> res = {};
+
+    <span class="token-function">keys</span>(filter).<span class="token-function">forEach</span>(key => {
+        <span class="token-keyword">const</span> values = filter[key];
+
+        <span class="token-keyword">switch</span> (key) {
+            <span class="token-keyword">case</span> <span class="token-string">'brand_slug'</span>:
+            <span class="token-keyword">case</span> <span class="token-string">'product_id'</span>:
+            <span class="token-keyword">case</span> <span class="token-string">'vendor_company_id'</span>:
+            <span class="token-keyword">case</span> <span class="token-string">'keheam_user_id'</span>:
+            <span class="token-keyword">case</span> <span class="token-string">'bdm_user_id'</span>:
+                <span class="token-comment">// Extract just the ID from each suggestion</span>
+                res[key] = values.<span class="token-function">map</span>(s => s.id).<span class="token-function">filter</span>(isPresent);
+                <span class="token-keyword">break</span>;
+
+            <span class="token-keyword">case</span> <span class="token-string">'status'</span>:
+                <span class="token-comment">// Cast to the correct enum type</span>
+                res.status = values.<span class="token-function">map</span>(s => s.id <span class="token-keyword">as</span> <span class="token-type">OfferStatus</span>);
+                <span class="token-keyword">break</span>;
+
+            <span class="token-keyword">case</span> <span class="token-string">'related_offer_slug'</span>:
+                <span class="token-comment">// Single value, not an array</span>
+                res.related_offer_slug = values[<span class="token-variable">0</span>]?.id;
+                <span class="token-keyword">break</span>;
+        }
+    });
+
+    <span class="token-keyword">return</span> res;
+};</code></pre>
+
+    <p>
+        This is the "compression" step. A suggestion object might carry a label, a renderer, and a full result object. We strip it down to just <code>id</code> &mdash; the one thing the backend needs and the one thing that belongs in the URL.
+    </p>
+
+    <hr class="section-divider">
+
+    <h2>The Pattern Scales</h2>
+
+    <p>
+        We use this exact same architecture across four different search screens, each with different filter attributes:
+    </p>
+
+    <ul>
+        <li><strong>Offer Review</strong> &mdash; 11 attributes (brands, products, vendors, users, statuses, delivery types...)</li>
+        <li><strong>All Offers</strong> &mdash; 8 attributes (brands, products, retail chains, calendars, years...)</li>
+        <li><strong>Surveys</strong> &mdash; 10 attributes (titles, stores, distribution centers, date ranges...)</li>
+        <li><strong>Stores</strong> &mdash; 7 attributes (names, accounts, chains, price zones...)</li>
+    </ul>
+
+    <p>
+        Each screen provides its own <code>useInputHints</code>, <code>buildOutFilter</code>, and <code>useFilterPreviewFromUrlParams</code>. The reusable <code>FilterInput</code> component doesn't care about the specifics &mdash; it just orchestrates the flow. This separation of concerns makes adding a new searchable screen a matter of defining the filter configuration, not rewriting the search infrastructure.
+    </p>
+
+    <hr class="section-divider">
+
+    <h2>Key Takeaways</h2>
+
+    <div class="callout callout-idea">
+        <p><strong>If you're building something similar, here's what we'd recommend:</strong></p>
+    </div>
+
+    <ul class="principle-list">
+        <li>
+            <span class="num">1</span>
+            <span><strong>Store only minimal data in the URL.</strong> IDs, slugs, enum values &mdash; nothing more. Keep URLs short, tidy, and shareable.</span>
+        </li>
+        <li>
+            <span class="num">2</span>
+            <span><strong>Build preview queries dynamically.</strong> Don't hardcode a monolithic query. Compose query fragments at runtime based on which filters are active. Your backend will thank you.</span>
+        </li>
+        <li>
+            <span class="num">3</span>
+            <span><strong>Resolve what you can on the client.</strong> Statuses, enums, and already-readable values don't need a round trip. Split your preview logic into "needs query" vs. "resolve locally."</span>
+        </li>
+        <li>
+            <span class="num">4</span>
+            <span><strong>Make the filter component generic.</strong> Push domain-specific logic into hooks and callbacks. The core component should be reusable across screens.</span>
+        </li>
+        <li>
+            <span class="num">5</span>
+            <span><strong>Debounce thoughtfully.</strong> Backend-fetched suggestions need debouncing; local enums don't. Make it configurable per attribute.</span>
+        </li>
+    </ul>
+
+    <hr class="section-divider">
+
+    <h2>Wrapping Up</h2>
+
+    <p>
+        The dynamic query building pattern has served us well at ProGrocery. URLs stay clean and shareable. Backend queries stay optimal &mdash; never fetching more than what's needed. And the UI stays rich, showing human-readable labels for every filter, even when the URL only contains cryptic IDs.
+    </p>
+
+    <p>
+        The implementation details will of course vary for your app, but the core idea should stay the same: <strong>store minimal data, build queries dynamically, resolve locally when possible.</strong>
+    </p>
+
+    <p>
+        We'd love to hear about your experience with search parameters in URLs. Have you tried a similar approach? Did you run into edge cases we haven't mentioned? Drop a comment below!
+    </p>
+
+    <p>Stay tuned for more from the ProGrocery engineering team.</p>
+
+</article>
+
+<footer>
+    <p>
+        <a href="https://www.freevision.co" target="_blank">Freevision</a>
+        &middot;
+        <a href="https://www.freevision.co/case-studies/application-for-progrocery" target="_blank">ProGrocery Case Study</a>
+    </p>
+    <p>Built with React, TypeScript &amp; GraphQL</p>
+</footer>
+
+</body>
+</html>
